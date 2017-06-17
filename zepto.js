@@ -67,7 +67,7 @@ var Zepto = (function() {
     // 处理不支持matches API的情况
     var match, parent = element.parentNode, temp = !parent
     // 不存在父元素时（$中的参数为fragment时）
-    tempParent = document.createElement('div')
+    // tempParent = document.createElement('div')
     // 在一个临时的div中加入document
     if (temp) (parent = tempParent).appendChild(element)
     // 用qsa函数去匹配元素，parent相当于一个上下文
@@ -275,11 +275,14 @@ var Zepto = (function() {
 
   function extend(target, source, deep) {
     for (key in source)
+      // 是深复制且要复制的值是数组或者对象
       if (deep && (isPlainObject(source[key]) || isArray(source[key]))) {
+        // 要复制的值是个对象且在目标中该key不存在时，新建个空对象，防止报错
         if (isPlainObject(source[key]) && !isPlainObject(target[key]))
           target[key] = {}
         if (isArray(source[key]) && !isArray(target[key]))
           target[key] = []
+        // 递归传值
         extend(target[key], source[key], deep)
       }
       else if (source[key] !== undefined) target[key] = source[key]
@@ -287,12 +290,16 @@ var Zepto = (function() {
 
   // Copy all but undefined properties from one or more
   // objects to the `target` object.
+  // 深复制时第一个参数要传Boolean类型，不是Boolean类型时为浅复制
   $.extend = function(target){
+    // 取第一个参数之后的参数，有可能只包含source，深复制时，target和source都包含
     var deep, args = slice.call(arguments, 1)
     if (typeof target == 'boolean') {
       deep = target
+      // 取target，args余下的是source
       target = args.shift()
     }
+    // 遍历source项复制值
     args.forEach(function(arg){ extend(target, arg, deep) })
     return target
   }
