@@ -232,13 +232,15 @@ var Zepto = (function() {
       // If it's a html fragment, create nodes from it
       // Note: In both Chrome 21 and Firefox 15, DOM error 12
       // is thrown if the fragment doesn't begin with <
+      // html字符串
       if (selector[0] == '<' && fragmentRE.test(selector))
         dom = zepto.fragment(selector, RegExp.$1, context), selector = null
       // If there's a context, create a collection on that context first, and select
       // nodes from there
+      // 第二个参数存在时，把第二个参数的作为查找基点
       else if (context !== undefined) return $(context).find(selector)
       // If it's a CSS selector, use it to select nodes.
-      // css选择器切入点
+      // 具体css选择器切入点
       else dom = zepto.qsa(document, selector)
     }
     // If a function is given, call it when the DOM is ready
@@ -311,6 +313,7 @@ var Zepto = (function() {
     var found,
         maybeID = selector[0] == '#',
         maybeClass = !maybeID && selector[0] == '.',
+        // 取去除选择符的选择器字母
         nameOnly = maybeID || maybeClass ? selector.slice(1) : selector, // Ensure that a 1 char tag name still gets checked
         isSimple = simpleSelectorRE.test(nameOnly)
     return (element.getElementById && isSimple && maybeID) ? // Safari DocumentFragment doesn't have getElementById
