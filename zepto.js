@@ -315,11 +315,24 @@ var Zepto = (function() {
         maybeClass = !maybeID && selector[0] == '.',
         // 取去除选择符的选择器字母
         nameOnly = maybeID || maybeClass ? selector.slice(1) : selector, // Ensure that a 1 char tag name still gets checked
+        // 检测是否为单纯的字母或-，否则调用queryselectAll API
         isSimple = simpleSelectorRE.test(nameOnly)
     return (element.getElementById && isSimple && maybeID) ? // Safari DocumentFragment doesn't have getElementById
+      // 是否为简单选择器和ID选择器
       ( (found = element.getElementById(nameOnly)) ? [found] : [] )  :
+      // 非ID选择器
+      // 非 1：Element元素节点 9：Document节点 11：DocumentFragment节点时，返回空数组
       (element.nodeType !== 1 && element.nodeType !== 9 && element.nodeType !== 11) ? [] :
+        // 将NodeList（getElementById、querySelector）、HTMLCollection（getElementsByTagName（ClassName））转换为数组
+        // 不全部用querySelectorAll的原因是其性能比较差
+        // getElementBy与querySelector的区别：
+        // getElementBy返回的是Live Node List，每次调用都会重新对文档进行查询
+        // HTMLCollection与NodeList的区别：
+        // 1. HTMLCollection只包含文档中Element的节点
+        // 2. NodeList包含文档中所有节点
       slice.call(
+        // 是否为DocumentFragment
+        // 不一开始判断是因为在除Safari中，DocumentFragment对象都存在getElementById方法
         isSimple && !maybeID && element.getElementsByClassName ? // DocumentFragment doesn't have getElementsByClassName/TagName
           maybeClass ? element.getElementsByClassName(nameOnly) : // If it's simple, it could be a class
           element.getElementsByTagName(selector) : // Or a tag
