@@ -102,6 +102,7 @@ var Zepto = (function() {
   }
 
   function compact(array) { return filter.call(array, function(item){ return item != null }) }
+  // 无论array是不是数组，都将返回一个数组
   function flatten(array) { return array.length > 0 ? $.fn.concat.apply([], array) : array }
   camelize = function(str){ return str.replace(/-+(.)?/g, function(match, chr){ return chr ? chr.toUpperCase() : '' }) }
   function dasherize(str) {
@@ -249,8 +250,10 @@ var Zepto = (function() {
     else if (zepto.isZ(selector)) return selector
     else {
       // normalize array if an array of nodes is given
+      // 传入数组时，去掉null和undefined元素
       if (isArray(selector)) dom = compact(selector)
       // Wrap DOM nodes.
+      // 传入对象时，将对象加入数组中
       else if (isObject(selector))
         dom = [selector], selector = null
       // If it's a html fragment, create nodes from it
@@ -428,6 +431,7 @@ var Zepto = (function() {
   $.expr = { }
   $.noop = function() {}
 
+  // 为数组或对象的每个元素执行callback的过滤，并过滤不通过的元素，忽略值为null或undefined的元素
   $.map = function(elements, callback){
     var value, values = [], i, key
     if (likeArray(elements))
@@ -481,19 +485,31 @@ var Zepto = (function() {
     sort: emptyArray.sort,
     splice: emptyArray.splice,
     indexOf: emptyArray.indexOf,
+    // 处理类数组元素后连接数组
     concat: function(){
       var i, value, args = []
+      // 将arguments类数组（的Z对象）转换为数组
       for (i = 0; i < arguments.length; i++) {
         value = arguments[i]
+        // value.toArray:
+        // return idx === undefined ? slice.call(this) : this[idx >= 0 ? idx : idx + this.length]
         args[i] = zepto.isZ(value) ? value.toArray() : value
       }
+      // 属于Z对象时，concat的this对象为序列后的数组
+      // 调用数组的concat方法连接数组
       return concat.apply(zepto.isZ(this) ? this.toArray() : this, args)
     },
 
     // `map` and `slice` in the jQuery API work differently
     // from their array counterparts
     map: function(fn){
-      return $($.map(this, function(el, i){ return fn.call(el, i, el) }))
+      // 将数组转换为Zepto对象
+      return $(
+        // $.map返回的是一个数组
+        $.map(this,
+          // 针对每个元素，都执行传入的函数，如果函数返回 != null就将插入到新数组
+          function(el, i){ return fn.call(el, i, el) })
+      )
     },
     slice: function(){
       return $(slice.apply(this, arguments))
@@ -515,6 +531,8 @@ var Zepto = (function() {
       }
       return this
     },
+    // 获取数组某个元素，当index>0时直接取这个元素，为负数时索引为index+数组长度
+    // 没有传参数时，序列化为数组对象
     get: function(idx){
       return idx === undefined ? slice.call(this) : this[idx >= 0 ? idx : idx + this.length]
     },
@@ -531,7 +549,7 @@ var Zepto = (function() {
     // 为每个zepto集合执行回调函数
     each: function(callback){
       // 函数结果为false时终止下一项执行,
-      // every函数的this执行each的this，也就是$('xxx').each的$('xxx')
+      // every函数的this指向each的this，也就是$('xxx').each的$('xxx')
       emptyArray.every.call(this, function(el, idx){
         // 改变callback的this指向为当前遍历的元素
         // 传入的第一个参数为该项的index，第二个参数为当前遍历的元素
@@ -590,6 +608,7 @@ var Zepto = (function() {
       var el = this[this.length - 1]
       return el && !isObject(el) ? el : $(el)
     },
+    // 查找子级元素API
     find: function(selector){
       var result, $this = this
       if (!selector) result = $()
@@ -601,6 +620,7 @@ var Zepto = (function() {
           })
         })
       else if (this.length == 1) result = $(zepto.qsa(this[0], selector))
+        // 有多个元素时，为每个元素执行过滤操作
       else result = this.map(function(){ return zepto.qsa(this, selector) })
       return result
     },
