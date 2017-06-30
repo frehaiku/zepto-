@@ -610,12 +610,20 @@ var Zepto = (function() {
     },
     // 查找子级元素API
     find: function(selector){
+      // $this为$(selector).find()中的$(selector)
       var result, $this = this
       if (!selector) result = $()
+      // 当selector是Z对象时
       else if (typeof selector == 'object')
+      // $(selector)是用compact方法处理qsa得到的Z对象，处理null或undefined的值
+      // $(selector)为类数组对象
         result = $(selector).filter(function(){
+          // node为find()参数的Z对象的数组遍历元素
           var node = this
+          debugger
+          // 取类数组对象的索引作为数组遍历元素
           return emptyArray.some.call($this, function(parent){
+            // 匹配到就立即返回
             return $.contains(parent, node)
           })
         })
