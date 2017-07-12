@@ -78,12 +78,20 @@ var Zepto = (function() {
     return match
   }
 
+  // 判断变量的类型，没有传入参数时，返回字符串"undefined"
+  // 一开始先初始化class2type变量，
+  // $.each("Boolean Number String Function Array Date RegExp Object Error".split(" "),
+  //    function(i, name) {class2type[ "[object " + name + "]" ] = name.toLowerCase()
+  // })
+  // 调用$.each函数时，先利用likeArray判断是否为类数组，likeArray又调用了type方法
+  // 此时class2type还没被初始化，故type返回的是"object"。这就是class2type[toString.call(obj)] || "object"的作用
   function type(obj) {
     return obj == null ? String(obj) :
       class2type[toString.call(obj)] || "object"
   }
 
   function isFunction(value) { return type(value) == "function" }
+  // 检测变量是否为全局变量
   function isWindow(obj)     { return obj != null && obj == obj.window }
   function isDocument(obj)   { return obj != null && obj.nodeType == obj.DOCUMENT_NODE }
   function isObject(obj)     { return type(obj) == "object" }
@@ -91,6 +99,11 @@ var Zepto = (function() {
     return isObject(obj) && !isWindow(obj) && Object.getPrototypeOf(obj) == Object.prototype
   }
 
+  // 判断是否为类数组，下面两种情况都符合：
+  // obj为纯数组时
+  // obj为Z对象时，也就是{0: 1, 1: 2, selector: 'xxx', length: 2}
+  // 符合时，可以直接通过for语句递增i=0，遍历数据
+  // 不符合时，要通过for in语句遍历数据
   function likeArray(obj) {
     var length = !!obj && 'length' in obj && obj.length,
       type = $.type(obj)
@@ -312,6 +325,7 @@ var Zepto = (function() {
   // `$.zepto.qsa` is Zepto's CSS selector implementation which
   // uses `document.querySelectorAll` and optimizes for some special cases, like `#id`.
   // This method can be overridden in plugins.
+  // element为上下文，selector为选择器
   zepto.qsa = function(element, selector){
     var found,
         maybeID = selector[0] == '#',
@@ -447,6 +461,9 @@ var Zepto = (function() {
     return flatten(values)
   }
 
+  // 为每一个元素，执行回调，回调函数的this指向当前元素，第一个是当前遍历的索引，第二个参数是当前遍历的元素，这与this相同
+  // callback返回值为false时，立即中断循环，相当于for的break语句
+  // $.each函数返回值是当前传入的参数elements
   $.each = function(elements, callback){
     var i, key
     if (likeArray(elements)) {
@@ -467,6 +484,14 @@ var Zepto = (function() {
   if (window.JSON) $.parseJSON = JSON.parse
 
   // Populate the class2type map
+  // 填充class2type对象的值，为type检测类型的函数做准备
+  // 使它成为如下结构
+  // {
+  //    "[object Boolean]": "boolean",
+  //    "[object Number]": "number",
+  //    "[object String]": "string",
+  //    ...
+  // }
   $.each("Boolean Number String Function Array Date RegExp Object Error".split(" "), function(i, name) {
     class2type[ "[object " + name + "]" ] = name.toLowerCase()
   })
@@ -558,6 +583,8 @@ var Zepto = (function() {
       return this
     },
     filter: function(selector){
+      // selector为函数时，里面的this.not(selector)返回selector函数返回值为false的this中某些元素组成的Z数组
+      // 外层的this.not(this.not(selector))处理的是selector返回true的Z数组
       if (isFunction(selector)) return this.not(this.not(selector))
       // selector为非函数（字符串，类数组等）
       return $(filter.call(this, function(element){
@@ -570,7 +597,7 @@ var Zepto = (function() {
     is: function(selector){
       return this.length > 0 && zepto.matches(this[0], selector)
     },
-    // 过滤当前对象集合，与filter相反
+    // 过滤当前对象集合，与filter函数的作用相反
     not: function(selector){
       // 需返回的数组集合
       var nodes=[]
@@ -582,6 +609,8 @@ var Zepto = (function() {
         })
       else {
         // 先找出符合的元素，再用indexOf取反
+        // 是selector为字符串时，直接调用filter方法，取匹配的元素
+        // isFunction(selector.item)的用意是当selector传入的是HTMLCollection时
         var excludes = typeof selector == 'string' ? this.filter(selector) :
           (likeArray(selector) && isFunction(selector.item)) ? slice.call(selector) : $(selector)
         this.forEach(function(el){
@@ -615,21 +644,28 @@ var Zepto = (function() {
       if (!selector) result = $()
       // 当selector是Z对象时
       else if (typeof selector == 'object')
-      // $(selector)是用compact方法处理qsa得到的Z对象，处理null或undefined的值
       // $(selector)为类数组对象
+      // 既然传过来的就是Z对象了，只需判断每个Z对象的元素是否在$this中即可
+
+        // filter方法内部实现是this.not(this.not(selector))
+        // 最终将返回一个selector函数返回值为true的数组
         result = $(selector).filter(function(){
           // node为find()参数的Z对象的数组遍历元素
           var node = this
           debugger
-          // 取类数组对象的索引作为数组遍历元素
+          // 在每个$(this)中判断是否包含其中的一个$(selector)
+          // 匹配到就立即返回,终止循环
           return emptyArray.some.call($this, function(parent){
-            // 匹配到就立即返回
+            // $.contains返回true或false
             return $.contains(parent, node)
           })
         })
+        // 当selector为字符串且$this为ID选择器时
       else if (this.length == 1) result = $(zepto.qsa(this[0], selector))
-        // 有多个元素时，为每个元素执行过滤操作
-      else result = this.map(function(){ return zepto.qsa(this, selector) })
+        // 当selector为字符串时，为每个$this的子孩子中找selector
+      else {
+        result = this.map(function(){ return zepto.qsa(this, selector) })
+      }
       return result
     },
     closest: function(selector, context){
